@@ -16,7 +16,7 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B")
 
     model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B")
-    model = model.to(device)  # pyright: ignore
+    model.to(device)  # pyright: ignore[reportArgumentType] -- PreTrainedModel.to() is `@wraps(nn.Module.to)`, which pyright misresolves against nn.Module.__call__
     model.eval()
 
     eos_id = tokenizer.eos_token_id
@@ -26,7 +26,7 @@ def main() -> None:
 
     with torch.no_grad():
         for _ in range(100):
-            logits = model(input_ids).logits
+            logits = model(input_ids, use_cache=False).logits
             next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
             input_ids = torch.cat([input_ids, next_token], dim=1)
             if next_token.item() == eos_id:
