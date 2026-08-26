@@ -1,0 +1,18 @@
+[project]
+name = "ragged-batch"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Hong Fan Zhao", email = "50516716+zhfans@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "loguru>=0.7.3",
+    "torch>=2.13.0",
+    "transformers>=5.16.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.6,<0.13.0"]
+build-backend = "uv_build"
