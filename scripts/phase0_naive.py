@@ -1,40 +1,67 @@
+"""Phase 0 — naive autoregressive decoding.
+
+Greedy decode by raw forward pass with no KV cache: every step re-processes the
+whole sequence from position 0 (O(n) work per step, O(n^2) over a generation).
+Slow but trivially correct — the token-for-token oracle every later phase must
+reproduce.
+"""
+
 import torch
 from loguru import logger
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import PreTrainedModel
+
+from ragged_batch import DecodeTimer, load_model, pick_device
+
+PROMPT = "Hello, my name is"
+MAX_NEW_TOKENS = 100
+
+
+@torch.no_grad()
+def naive_decode(
+    model: PreTrainedModel,
+    input_ids: torch.Tensor,
+    *,
+    max_new_tokens: int,
+    eos_id: int | None,
+    timer: DecodeTimer,
+) -> torch.Tensor:
+    """Greedy-decode from ``input_ids`` with no cache; return prompt + generated ids.
+
+    Every step feeds the entire running sequence back through the model
+    (``use_cache=False``) and keeps only the last position's logits. The first
+    pass (prompt only) is timed as prefill so its cost lines up with the cached
+    phase's prefill; the rest are decode steps.
+    """
+    generated = input_ids
+    for step in range(max_new_tokens):
+        region = timer.prefill() if step == 0 else timer.step()
+        with region:
+            logits = model(generated, use_cache=False).logits
+        next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
+        generated = torch.cat([generated, next_token], dim=1)
+        if eos_id is not None and next_token.item() == eos_id:
+            break
+    return generated
 
 
 def main() -> None:
-    device = (
-        "cuda"
-        if torch.cuda.is_available()
-        else "mps"
-        if torch.backends.mps.is_available()
-        else "cpu"
+    device = pick_device()
+    logger.info(f"device: {device}")
+
+    tokenizer, model = load_model(device=device)
+    input_ids = tokenizer(PROMPT, return_tensors="pt").input_ids.to(device)
+
+    timer = DecodeTimer(device)
+    generated = naive_decode(
+        model,
+        input_ids,
+        max_new_tokens=MAX_NEW_TOKENS,
+        eos_id=tokenizer.eos_token_id,
+        timer=timer,
     )
-    logger.info(f"Using device: {device}")
 
-    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-0.5B")
-
-    model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B")
-    model.to(device)  # pyright: ignore[reportArgumentType] -- PreTrainedModel.to() is `@wraps(nn.Module.to)`, which pyright misresolves against nn.Module.__call__
-    model.eval()
-
-    eos_id = tokenizer.eos_token_id
-
-    tokens = tokenizer("Hello, my name is", return_tensors="pt")
-    input_ids = tokens.input_ids.to(device)
-
-    with torch.no_grad():
-        for _ in range(100):
-            logits = model(input_ids, use_cache=False).logits
-            next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
-            input_ids = torch.cat([input_ids, next_token], dim=1)
-            if next_token.item() == eos_id:
-                break
-
-    logger.info(
-        f"Generated text: {tokenizer.decode(input_ids[0], skip_special_tokens=True)}"
-    )
+    logger.info(f"output: {tokenizer.decode(generated[0], skip_special_tokens=True)!r}")
+    logger.info(timer.build(prompt_tokens=input_ids.shape[1]).summary())
 
 
 if __name__ == "__main__":
