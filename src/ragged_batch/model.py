@@ -32,3 +32,15 @@ def load_model(
     model.eval()
 
     return tokenizer, model
+
+
+def resolve_eos_id(tokenizer: PreTrainedTokenizerBase) -> int | None:
+    """Narrow ``tokenizer.eos_token_id`` to a single int, or ``None``.
+
+    ``PreTrainedTokenizerBase`` types the attribute as a broad union: a
+    tokenizer may in principle carry several EOS tokens as a list, or none.
+    Every model these phases run has exactly one integer EOS, so collapse the
+    union here and let the decode loops take a plain ``int | None``.
+    """
+    eos = tokenizer.eos_token_id
+    return eos if isinstance(eos, int) else None

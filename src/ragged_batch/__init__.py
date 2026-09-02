@@ -7,7 +7,7 @@ equivalence instrumentation their benchmarks report.
 
 from ragged_batch.benchmark import DecodeTimer, DecodeTrace, assert_tokens_match
 from ragged_batch.device import pick_device, synchronize
-from ragged_batch.model import DEFAULT_MODEL_ID, load_model
+from ragged_batch.model import DEFAULT_MODEL_ID, load_model, resolve_eos_id
 
 __all__ = [
     "DEFAULT_MODEL_ID",
@@ -16,5 +16,6 @@ __all__ = [
     "assert_tokens_match",
     "load_model",
     "pick_device",
+    "resolve_eos_id",
     "synchronize",
 ]

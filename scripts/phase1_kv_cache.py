@@ -11,7 +11,13 @@ from loguru import logger
 from phase0_naive import naive_decode
 from transformers import PreTrainedModel
 
-from ragged_batch import DecodeTimer, assert_tokens_match, load_model, pick_device
+from ragged_batch import (
+    DecodeTimer,
+    assert_tokens_match,
+    load_model,
+    pick_device,
+    resolve_eos_id,
+)
 
 PROMPT = "Hello, my name is"
 EQUIVALENCE_TOKENS = 64
@@ -58,7 +64,7 @@ def main() -> None:
     logger.info(f"device: {device}")
 
     tokenizer, model = load_model(device=device)
-    eos_id = tokenizer.eos_token_id
+    eos_id = resolve_eos_id(tokenizer)
     input_ids = tokenizer(PROMPT, return_tensors="pt").input_ids.to(device)
     prompt_tokens = input_ids.shape[1]
 

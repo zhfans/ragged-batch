@@ -10,7 +10,7 @@ import torch
 from loguru import logger
 from transformers import PreTrainedModel
 
-from ragged_batch import DecodeTimer, load_model, pick_device
+from ragged_batch import DecodeTimer, load_model, pick_device, resolve_eos_id
 
 PROMPT = "Hello, my name is"
 MAX_NEW_TOKENS = 100
@@ -56,7 +56,7 @@ def main() -> None:
         model,
         input_ids,
         max_new_tokens=MAX_NEW_TOKENS,
-        eos_id=tokenizer.eos_token_id,
+        eos_id=resolve_eos_id(tokenizer),
         timer=timer,
     )
 
