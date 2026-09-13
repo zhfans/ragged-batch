@@ -153,8 +153,9 @@ def main() -> None:
         # exactly at its own budget. Failing here means the budget/EOS bookkeeping
         # is wrong -- e.g. an off-by-one in `finished_step` -- not that the batched
         # and solo runs said different words.
-        assert int(finished_step[i]) == budget - 1, (
-            f"row {i} finished at step {finished_step[i]}, expected {budget - 1} "
+        finished = int(finished_step[i])
+        assert finished == budget - 1, (
+            f"row {i} finished at step {finished}, expected {budget - 1} "
             f"({prompt!r}, budget={budget}) -- or EOS fired before the budget did"
         )
 
